@@ -2,51 +2,26 @@ import logging
 import os
 import time
 from abc import ABC, abstractmethod
-from typing import NamedTuple, Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Any
 
 import torch as tr
 from torch import nn, Tensor
 
 from neutone_sdk import constants
-from neutone_sdk.parameter import NeutoneParameter, ParameterMetadata
+from neutone_sdk.parameter import NeutoneParameter
 
 logging.basicConfig()
 log = logging.getLogger(__name__)
 log.setLevel(level=os.environ.get("LOGLEVEL", "INFO"))
 
 
-class CoreMetadata(NamedTuple):
-    model_name: str
-    model_authors: List[str]
-    model_short_description: str
-    model_long_description: str
-    technical_description: str
-    technical_links: Dict[str, str]
-    neutone_parameters: Dict[str, ParameterMetadata]
-    wet_default_value: float
-    dry_default_value: float
-    input_gain_default_value: float
-    output_gain_default_value: float
-    tags: List[str]
-    model_version: str
-    sdk_version: str
-    date_created: float
-    pytorch_version: str
-    citation: str
-    is_experimental: bool
-
-
 class NeutoneModel(ABC, nn.Module):
     # TorchScript typing does not support instance attributes, so we need to type them
     # as class attributes. This is required for supporting models with no parameters.
     # (https://github.com/pytorch/pytorch/issues/51041#issuecomment-767061194)
-    neutone_parameters_metadata: Dict[str, ParameterMetadata]
+    neutone_parameters_metadata: Dict[str, Dict[str, Union[int, float, str, bool, List[str]]]]
     remapped_params: Dict[str, Tensor]
     neutone_parameter_names: List[str]
-    # TODO(cm): remove from here once plugin metadata parsing is implemented
-    neutone_parameter_descriptions: List[str]
-    neutone_parameter_used: List[bool]
-    neutone_parameter_types: List[str]
 
     def __init__(self, model: nn.Module, use_debug_mode: bool = True) -> None:
         """
@@ -94,20 +69,11 @@ class NeutoneModel(ABC, nn.Module):
 
         # Allocate remapped params dictionary to prevent dynamic allocations later
         self.remapped_params = {
-            name: tr.tensor([val])
-            for name, val in numerical_default_param_vals
+            name: tr.tensor([val]) for name, val in numerical_default_param_vals
         }
 
         # Save parameter information
         self.neutone_parameter_names = [p.name for p in self.get_neutone_parameters()]
-        # TODO(cm): remove from here once plugin metadata parsing is implemented
-        self.neutone_parameter_descriptions = [
-            p.description for p in self.get_neutone_parameters()
-        ]
-        self.neutone_parameter_used = [p.used for p in self.get_neutone_parameters()]
-        self.neutone_parameter_types = [
-            p.type.value for p in self.get_neutone_parameters()
-        ]
 
     @abstractmethod
     def _get_max_n_params(self) -> int:
@@ -266,7 +232,9 @@ class NeutoneModel(ABC, nn.Module):
         self.eval()
 
     @tr.jit.export
-    def get_neutone_parameters_metadata(self) -> Dict[str, ParameterMetadata]:
+    def get_neutone_parameters_metadata(
+        self,
+    ) -> Dict[str, Dict[str, Union[int, float, str, bool, List[str]]]]:
         """
         Returns the metadata of the parameters as a dictionary of ParameterMetadata
         named tuples.
@@ -280,26 +248,6 @@ class NeutoneModel(ABC, nn.Module):
         (N_DEFAULT_PARAM_VALUES, 1).
         """
         return self.default_param_values
-
-    @tr.jit.export
-    def get_default_param_names(self) -> List[str]:
-        # TODO(cm): remove this once plugin metadata parsing is implemented
-        return self.neutone_parameter_names
-
-    @tr.jit.export
-    def get_default_param_descriptions(self) -> List[str]:
-        # TODO(cm): remove this once plugin metadata parsing is implemented
-        return self.neutone_parameter_descriptions
-
-    @tr.jit.export
-    def get_default_param_types(self) -> List[str]:
-        # TODO(cm): remove this once plugin metadata parsing is implemented
-        return self.neutone_parameter_types
-
-    @tr.jit.export
-    def get_default_param_used(self) -> List[bool]:
-        # TODO(cm): remove this once plugin metadata parsing is implemented
-        return self.neutone_parameter_used
 
     @tr.jit.export
     def get_wet_default_value(self) -> float:
@@ -325,10 +273,6 @@ class NeutoneModel(ABC, nn.Module):
             "model",  # nn.Module
             "get_neutone_parameters_metadata",
             "get_default_param_values",
-            "get_default_param_names",
-            "get_default_param_descriptions",
-            "get_default_param_types",
-            "get_default_param_used",
             "get_wet_default_value",
             "get_dry_default_value",
             "get_input_gain_default_value",
@@ -338,24 +282,24 @@ class NeutoneModel(ABC, nn.Module):
         ]
 
     @tr.jit.export
-    def to_core_metadata(self) -> CoreMetadata:
-        return CoreMetadata(
-            model_name=self.get_model_name(),
-            model_authors=self.get_model_authors(),
-            model_short_description=self.get_model_short_description(),
-            model_long_description=self.get_model_long_description(),
-            neutone_parameters=self.get_neutone_parameters_metadata(),
-            wet_default_value=self.get_wet_default_value(),
-            dry_default_value=self.get_dry_default_value(),
-            input_gain_default_value=self.get_input_gain_default_value(),
-            output_gain_default_value=self.get_output_gain_default_value(),
-            technical_description=self.get_technical_description(),
-            technical_links=self.get_technical_links(),
-            tags=self.get_tags(),
-            model_version=self.get_model_version(),
-            sdk_version=self.SDK_VERSION,
-            pytorch_version=tr.__version__,
-            date_created=self.CURRENT_TIME,
-            citation=self.get_citation(),
-            is_experimental=self.is_experimental(),
-        )
+    def to_core_metadata(self) -> Dict[str, Any]:
+        return {
+            "model_name": self.get_model_name(),
+            "model_authors": self.get_model_authors(),
+            "model_short_description": self.get_model_short_description(),
+            "model_long_description": self.get_model_long_description(),
+            "neutone_parameters": self.get_neutone_parameters_metadata(),
+            "wet_default_value": self.get_wet_default_value(),
+            "dry_default_value": self.get_dry_default_value(),
+            "input_gain_default_value": self.get_input_gain_default_value(),
+            "output_gain_default_value": self.get_output_gain_default_value(),
+            "technical_description": self.get_technical_description(),
+            "technical_links": self.get_technical_links(),
+            "tags": self.get_tags(),
+            "model_version": self.get_model_version(),
+            "sdk_version": self.SDK_VERSION,
+            "pytorch_version": tr.__version__,
+            "date_created": self.CURRENT_TIME,
+            "citation": self.get_citation(),
+            "is_experimental": self.is_experimental(),
+        }

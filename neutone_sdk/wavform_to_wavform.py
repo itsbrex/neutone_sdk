@@ -1,7 +1,8 @@
 import json
 import logging
+import os
 from abc import abstractmethod
-from typing import NamedTuple, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Any
 
 import torch as tr
 from torch import Tensor, nn
@@ -10,41 +11,13 @@ from neutone_sdk import (
     NeutoneModel,
     constants,
     NeutoneParameterType,
-    ContinuousNeutoneParameter,
-    ParameterMetadata,
 )
 from neutone_sdk.queues import CircularInplaceTensorQueue
 from neutone_sdk.utils import validate_waveform
 
 logging.basicConfig()
 log = logging.getLogger(__name__)
-
-
-class WaveformToWaveformMetadata(NamedTuple):
-    model_name: str
-    model_authors: List[str]
-    model_version: str
-    model_short_description: str
-    model_long_description: str
-    technical_description: str
-    technical_links: Dict[str, str]
-    tags: List[str]
-    citation: str
-    is_experimental: bool
-    neutone_parameters: Dict[str, ParameterMetadata]
-    wet_default_value: float
-    dry_default_value: float
-    input_gain_default_value: float
-    output_gain_default_value: float
-    is_input_mono: bool
-    is_output_mono: bool
-    model_type: str
-    native_sample_rates: List[int]
-    native_buffer_sizes: List[int]
-    look_behind_samples: int
-    sdk_version: str
-    pytorch_version: str
-    date_created: float
+log.setLevel(level=os.environ.get("LOGLEVEL", "INFO"))
 
 
 class WaveformToWaveformBase(NeutoneModel):
@@ -68,28 +41,10 @@ class WaveformToWaveformBase(NeutoneModel):
             "models."
         )
 
-        # For compatibility with the current plugin, we fill in missing params
-        # TODO(cm): remove once plugin metadata parsing is implemented
-        for idx in range(self.n_neutone_parameters, self.MAX_N_PARAMS):
-            unused_p = ContinuousNeutoneParameter(
-                name="",
-                description="",
-                default_value=0.0,
-                used=False,
-            )
-            self.neutone_parameters_metadata[f"p{idx+1}"] = unused_p.to_metadata()
-            self.neutone_parameter_names.append(unused_p.name)
-            self.neutone_parameter_descriptions.append(unused_p.description)
-            self.neutone_parameter_types.append(unused_p.type.value)
-            self.neutone_parameter_used.append(unused_p.used)
-
         # Save metadata JSON
-        # TODO(cm): remove namedtuples and use dicts instead (PR#87)
-        metadata = self.to_metadata()._asdict()
-        params_metadata = metadata["neutone_parameters"]
-        params_metadata = {k: v._asdict() for k, v in params_metadata.items()}
-        metadata["neutone_parameters"] = params_metadata
-        self.metadata_json_str = json.dumps(metadata, indent=4, sort_keys=True)
+        self.metadata_json_str = json.dumps(
+            self.to_metadata(), indent=4, sort_keys=True
+        )
 
     def _get_max_n_params(self) -> int:
         """
@@ -423,35 +378,19 @@ class WaveformToWaveformBase(NeutoneModel):
         return preserved_attrs
 
     @tr.jit.export
-    def to_metadata(self) -> WaveformToWaveformMetadata:
+    def to_metadata(self) -> Dict[str, Any]:
         # This avoids using inheritance which torchscript does not support
         core_metadata = self.to_core_metadata()
-        return WaveformToWaveformMetadata(
-            model_name=core_metadata.model_name,
-            model_authors=core_metadata.model_authors,
-            model_short_description=core_metadata.model_short_description,
-            model_long_description=core_metadata.model_long_description,
-            neutone_parameters=core_metadata.neutone_parameters,
-            wet_default_value=core_metadata.wet_default_value,
-            dry_default_value=core_metadata.dry_default_value,
-            input_gain_default_value=core_metadata.input_gain_default_value,
-            output_gain_default_value=core_metadata.output_gain_default_value,
-            technical_description=core_metadata.technical_description,
-            technical_links=core_metadata.technical_links,
-            tags=core_metadata.tags,
-            model_version=core_metadata.model_version,
-            sdk_version=core_metadata.sdk_version,
-            pytorch_version=core_metadata.pytorch_version,
-            date_created=core_metadata.date_created,
-            citation=core_metadata.citation,
-            is_experimental=core_metadata.is_experimental,
-            is_input_mono=self.is_input_mono(),
-            is_output_mono=self.is_output_mono(),
-            model_type=f"{'mono' if self.is_input_mono() else 'stereo'}-{'mono' if self.is_output_mono() else 'stereo'}",
-            native_buffer_sizes=self.get_native_buffer_sizes(),
-            native_sample_rates=self.get_native_sample_rates(),
-            look_behind_samples=self.get_look_behind_samples(),
+        core_metadata["is_input_mono"] = self.is_input_mono()
+        core_metadata["is_output_mono"] = self.is_output_mono()
+        core_metadata["model_type"] = (
+            f"{'mono' if self.is_input_mono() else 'stereo'}"
+            f"-{'mono' if self.is_output_mono() else 'stereo'}"
         )
+        core_metadata["native_buffer_sizes"] = self.get_native_buffer_sizes()
+        core_metadata["native_sample_rates"] = self.get_native_sample_rates()
+        core_metadata["look_behind_samples"] = self.get_look_behind_samples()
+        return core_metadata
 
     @tr.jit.export
     def get_metadata_json(self) -> str:
