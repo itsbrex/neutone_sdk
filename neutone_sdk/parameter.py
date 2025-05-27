@@ -15,6 +15,7 @@ class NeutoneParameterType(Enum):
     CONTINUOUS = "continuous"
     CATEGORICAL = "categorical"
     TEXT = "text"
+    TOKENS = "tokens"
 
 
 class NeutoneParameter(ABC):
@@ -29,7 +30,7 @@ class NeutoneParameter(ABC):
         self,
         name: str,
         description: str,
-        default_value: Union[int, float, str],
+        default_value: Union[int, float, str, Optional[List[int]]],
         used: bool,
         param_type: NeutoneParameterType,
     ):
@@ -39,7 +40,9 @@ class NeutoneParameter(ABC):
         self.used = used
         self.type = param_type
 
-    def to_metadata(self) -> Dict[str, Union[int, float, str, bool, List[str]]]:
+    def to_metadata(
+        self,
+    ) -> Dict[str, Union[int, float, str, bool, List[str], List[int]]]:
         return {
             "name": self.name,
             "description": self.description,
@@ -119,7 +122,9 @@ class CategoricalNeutoneParameter(NeutoneParameter):
         self.labels = labels
 
     # def to_metadata(self) -> ParameterMetadata:
-    def to_metadata(self) -> Dict[str, Union[int, float, str, bool, List[str]]]:
+    def to_metadata(
+        self,
+    ) -> Dict[str, Union[int, float, str, bool, List[str], List[int]]]:
         metadata = super().to_metadata()
         metadata["n_values"] = self.n_values
         metadata["labels"] = self.labels
@@ -155,7 +160,46 @@ class TextNeutoneParameter(NeutoneParameter):
             ), "`default_value` must be a string of length less than `max_n_chars`"
         self.max_n_chars = max_n_chars
 
-    def to_metadata(self) -> Dict[str, Union[int, float, str, bool, List[str]]]:
+    def to_metadata(
+        self,
+    ) -> Dict[str, Union[int, float, str, bool, List[str], List[int]]]:
         metadata = super().to_metadata()
         metadata["max_n_chars"] = self.max_n_chars
+        return metadata
+
+
+class DiscreteTokensNeutoneParameter(NeutoneParameter):
+    """
+    Defines a discrete token tensor input to a Neutone model
+    Should be the output of a tokenizer that processes some text input.
+
+    The name and the description of the parameter will be shown as a tooltip
+    within the UI.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        max_n_tokens: int = -1,
+        default_value: Optional[List[int]] = None,
+        used: bool = True,
+    ):
+        if default_value is None:
+            default_value: List[int] = []
+        super().__init__(
+            name, description, default_value, used, NeutoneParameterType.TOKENS
+        )
+        assert max_n_tokens >= -1, "`max_n_tokens` must be greater than or equal to -1"
+        if max_n_tokens != -1:
+            assert (
+                len(default_value) <= max_n_tokens
+            ), "`default_value` must be a list of length less than `max_n_tokens`"
+        self.max_n_tokens = max_n_tokens
+
+    def to_metadata(
+        self,
+    ) -> Dict[str, Union[int, float, str, bool, List[str], List[int]]]:
+        metadata = super().to_metadata()
+        metadata["max_n_tokens"] = self.max_n_tokens
         return metadata
