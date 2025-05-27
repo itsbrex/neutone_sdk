@@ -7,7 +7,12 @@ from typing import Dict, List, Optional, Tuple, Union, Any
 import torch as tr
 from torch import Tensor, nn
 
-from neutone_sdk import NeutoneModel, constants, NeutoneParameterType
+from neutone_sdk import (
+    NeutoneModel,
+    constants,
+    NeutoneParameterType,
+    utils,
+)
 from neutone_sdk.utils import validate_waveform
 
 logging.basicConfig()
@@ -25,7 +30,9 @@ class NonRealtimeBase(NeutoneModel):
     # as class attributes. This is required for supporting models with no parameters.
     # (https://github.com/pytorch/pytorch/issues/51041#issuecomment-767061194)
     # From NeutoneModel, sometimes TorchScript complains if there are not redefined here
-    neutone_parameters_metadata: Dict[str, Dict[str, Union[int, float, str, bool, List[str]]]]
+    neutone_parameters_metadata: Dict[
+        str, Dict[str, Union[int, float, str, bool, List[str]]]
+    ]
     remapped_params: Dict[str, Tensor]
     neutone_parameter_names: List[str]
     # From this class
@@ -43,7 +50,16 @@ class NonRealtimeBase(NeutoneModel):
         Compatible with the Neutone Gen plugin.
         """
         super().__init__(model, use_debug_mode)
-        self.progress_percentage = 0
+        self.default_daw_sr = constants.DEFAULT_DAW_SR
+        self.default_daw_bs = constants.DEFAULT_DAW_BS
+        self.current_model_sample_rate = utils.select_best_model_sr(
+            self.default_daw_sr, self.get_native_sample_rates()
+        )
+        self.current_model_buffer_size = utils.select_best_model_buffer_size(
+            self.default_daw_bs, self.get_native_buffer_sizes()
+        )
+
+        self.progress_percentage = 0.0
         self.cancel_forward_pass_requested = False
         self.has_text_param = False
 
@@ -297,9 +313,10 @@ class NonRealtimeBase(NeutoneModel):
         """
         if self.use_debug_mode:
             assert cat_params.ndim == 2
-        return cat_params[:, :1]
+        agg_params, _ = tr.median(cat_params, dim=1, keepdim=True)
+        return agg_params
 
-    def set_progress_percentage(self, progress_percentage: int) -> None:
+    def set_progress_percentage(self, progress_percentage: float) -> None:
         """
         Sets the progress percentage of the model.
 
@@ -346,6 +363,8 @@ class NonRealtimeBase(NeutoneModel):
 
         This method should not be overwritten by SDK users.
         """
+        self.set_progress_percentage(0.0)  # Reset progress percentage
+
         if text_params is None:
             text_params = self.text_param_default_values
 
@@ -361,8 +380,11 @@ class NonRealtimeBase(NeutoneModel):
                             len(text) <= max_n_chars
                         ), f"Input text must be shorter than {max_n_chars} characters"
 
-        in_n = 1
+        in_n = self.current_model_buffer_size
+        if numerical_params is not None:
+            in_n = numerical_params.size(1)
         if audio_in:
+            # Audio takes priority for determining in_n
             in_n = audio_in[0].size(1)
 
         if numerical_params is None and self.n_numerical_params > 0:
@@ -374,7 +396,9 @@ class NonRealtimeBase(NeutoneModel):
 
         if self.use_debug_mode:
             if numerical_params is not None:
-                assert numerical_params.shape == (self.n_numerical_params, in_n)
+                assert numerical_params.size(0) == self.n_numerical_params
+                if audio_in:
+                    assert numerical_params.size(1) == in_n
             if not self.is_one_shot_model() and self.get_native_buffer_sizes():
                 assert (
                     in_n in self.get_native_buffer_sizes()
@@ -455,11 +479,18 @@ class NonRealtimeBase(NeutoneModel):
             successful, otherwise False.
         """
         if self.use_debug_mode:
+            assert sample_rate > 0
+            assert n_samples > 0
+            if self.get_native_sample_rates():
+                assert (
+                    sample_rate in self.get_native_sample_rates()
+                ), f"The model does not support a sample rate of {sample_rate}"
             if self.get_native_buffer_sizes():
                 assert (
                     n_samples in self.get_native_buffer_sizes()
                 ), f"The model does not support a native buffer size of {n_samples}"
-
+        self.current_model_sample_rate = sample_rate
+        self.current_model_buffer_size = n_samples
         return self.set_model_sample_rate_and_buffer_size(sample_rate, n_samples)
 
     @tr.jit.export
@@ -472,12 +503,18 @@ class NonRealtimeBase(NeutoneModel):
         Returns:
             bool: True if 'reset_model' is implemented and successful, otherwise False.
         """
-        self.set_progress_percentage(0)
+        self.current_model_sample_rate = utils.select_best_model_sr(
+            self.default_daw_sr, self.get_native_sample_rates()
+        )
+        self.current_model_buffer_size = utils.select_best_model_buffer_size(
+            self.default_daw_bs, self.get_native_buffer_sizes()
+        )
+        self.set_progress_percentage(0.0)
         self.cancel_forward_pass_requested = False
         return self.reset_model()
 
     @tr.jit.export
-    def get_progress_percentage(self) -> int:
+    def get_progress_percentage(self) -> float:
         """
         Returns the progress percentage of the model.
         """
@@ -505,6 +542,27 @@ class NonRealtimeBase(NeutoneModel):
         return self.has_text_param
 
     @tr.jit.export
+    def get_current_model_sample_rate(self) -> int:
+        """
+        Returns the current sample rate of the model if it has been set, else None.
+        """
+        return self.current_model_sample_rate
+
+    @tr.jit.export
+    def get_current_model_buffer_size(self) -> int:
+        """
+        Returns the current buffer size of the model if it has been set, else None.
+        """
+        return self.current_model_buffer_size
+
+    @tr.jit.export
+    def get_model_bpm(self) -> Optional[int]:
+        """
+        Returns the BPM the model was trained on if there is one.
+        """
+        return None
+
+    @tr.jit.export
     def get_preserved_attributes(self) -> List[str]:
         # This avoids using inheritance which torchscript does not support
         preserved_attrs = self.get_core_preserved_attributes()
@@ -522,6 +580,9 @@ class NonRealtimeBase(NeutoneModel):
                 "should_cancel_forward_pass",
                 "request_cancel_forward_pass",
                 "is_text_model",
+                "get_current_model_sample_rate",
+                "get_current_model_buffer_size",
+                "get_model_bpm",
                 "get_preserved_attributes",
                 "to_metadata",
                 "get_metadata_json",
@@ -541,6 +602,7 @@ class NonRealtimeBase(NeutoneModel):
         core_metadata["audio_in_labels"] = self.get_audio_in_labels()
         core_metadata["audio_out_labels"] = self.get_audio_out_labels()
         core_metadata["is_text_model"] = self.is_text_model()
+        core_metadata["model_bpm"] = self.get_model_bpm()
         return core_metadata
 
     @tr.jit.export
