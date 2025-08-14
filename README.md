@@ -14,8 +14,16 @@ The Neutone SDK is a tool for researchers that enables them to wrap their own au
 
 The SDK provides support for automatic buffering of inputs and outputs to your model and on-the-fly sample rate and stereo-mono conversion. It enables a model that can only be executed with a predefined number of samples to be used in the DAW at any sampling rate and any buffer size seamlessly. Additionally, within the SDK tools for benchmarking and profiling are readily available so you can easily debug and test the performance of your models.
 
-<a name="examples"/>
+## Citation
 
+<pre><code>@inproceedings{mitcheltree2025neutone,
+    title={Neutone {SDK}: An Open Source Framework for Neural Audio Processing},
+    author={Christopher Mitcheltree and Bogdan Teleaga and Andrew Fyfe and Naotake Masuda and Matthias Schäfer and Alfie Bradic and Nao Tokui},
+    booktitle={AES International Conference on Artificial Intelligence and Machine Learning for Audio},
+    year={2025},
+    url={https://doi.org/10.48550/arXiv.2508.09126}
+}
+</code></pre>
 
 ## Table of Contents
 - [Installing the SDK](#install)
