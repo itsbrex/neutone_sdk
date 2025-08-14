@@ -6,8 +6,11 @@
 [![ADC 2022](https://img.shields.io/badge/ADC%202022-blue?logo=youtube&labelColor=555)](https://youtu.be/hhbvjQ2v8Hk?t=1177)
 [![License](https://img.shields.io/badge/License-LGPL--2.1-blue)](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html)
 
-
-The Neutone SDK is a tool for researchers that enables them to wrap their own audio models and run them in a DAW using our [Neutone Plugin](https://neutone.space/). We offer functionality for both loading the models locally in the plugin and contributing them to the default list of models that is available to anyone running the plugin. We hope this will enable researchers to easily try their models in a DAW, but also provide creators with a collection of interesting models.
+The Neutone SDK is an open source framework that streamlines the deployment of PyTorch-based neural audio models for both real-time and offline applications.
+It enables researchers to wrap their own PyTorch audio models and run them in the DAW using our free host plugin [Neutone FX](https://neutone.ai/fx).
+We offer functionality for both loading models locally and contributing them to the library of models that are available to anyone running the plugin.
+By encapsulating common challenges such as variable buffer sizes, sample rate conversion, delay compensation, and control parameter handling within a unified, model-agnostic interface, our framework enables seamless interoperability between neural models and host plugins while allowing users to work entirely in Python. 
+To date, the SDK has powered various different applications such as audio effect emulation, timbre transfer, and sample generation, as well as seen adoption by researchers, educators, companies, and artists alike.
 
 ## Why use the Neutone SDK
 
