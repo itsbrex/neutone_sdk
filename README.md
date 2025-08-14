@@ -1,5 +1,11 @@
 # Neutone SDK
 
+[![Release](https://img.shields.io/badge/Release-v1.4.0-green)](https://github.com/Neutone/neutone_sdk/releases/tag/v1.4.0)
+[![arXiv](https://img.shields.io/badge/arXiv-2508.09126-b31b1b.svg)](https://arxiv.org/abs/2508.09126)
+[![License](https://img.shields.io/badge/License-LGPL--2.1-blue)](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html)
+[![Plugin](https://img.shields.io/badge/Host%20Plugin-Neutone%20FX-orange)](https://neutone.ai/fx)
+
+
 The Neutone SDK is a tool for researchers that enables them to wrap their own audio models and run them in a DAW using our [Neutone Plugin](https://neutone.space/). We offer functionality for both loading the models locally in the plugin and contributing them to the default list of models that is available to anyone running the plugin. We hope this will enable researchers to easily try their models in a DAW, but also provide creators with a collection of interesting models.
 
 ## Why use the Neutone SDK
