@@ -2,19 +2,20 @@
 
 [![Release](https://img.shields.io/badge/Release-v1.5.0-green)](https://github.com/Neutone/neutone_sdk/releases/tag/v1.5.0)
 [![arXiv](https://img.shields.io/badge/arXiv-2508.09126-b31b1b.svg)](https://arxiv.org/abs/2508.09126)
-[![Plugin](https://img.shields.io/badge/Host%20Plugin-Neutone%20FX-orange)](https://neutone.ai/fx)
+[![Plugin](https://img.shields.io/badge/Realtime%20Plugin-Neutone%20FX-orange)](https://neutone.ai/fx)
+[![Plugin](https://img.shields.io/badge/Non--realtime%20Plugin-Neutone%20Gen-orange)](https://neutone.ai/gen)
 [![ADC 2022](https://img.shields.io/badge/ADC%202022-blue?logo=youtube&labelColor=555)](https://youtu.be/hhbvjQ2v8Hk?t=1177)
 [![License](https://img.shields.io/badge/License-LGPL--2.1-blue)](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.en.html)
 
 The Neutone SDK is an open source framework that streamlines the deployment of PyTorch-based neural audio models for both real-time and offline applications.
-It enables researchers to wrap their own PyTorch audio models and run them in the DAW using our free host plugin [Neutone FX](https://neutone.ai/fx).
+It enables researchers to wrap their own PyTorch audio models and run them in the DAW using our free host plugins [Neutone FX](https://neutone.ai/fx) and [Neutone Gen](https://neutone.ai/gen).
 We offer functionality for both loading models locally and contributing them to the library of models that are available to anyone running the plugin.
 By encapsulating common challenges such as variable buffer sizes, sample rate conversion, delay compensation, and control parameter handling within a unified, model-agnostic interface, our framework enables seamless interoperability between neural models and host plugins while allowing users to work entirely in Python. 
 To date, the SDK has powered various different applications such as audio effect emulation, timbre transfer, and sample generation, as well as seen adoption by researchers, educators, companies, and artists alike.
 
-Currently we provide two different plugins:
-- FX for realtime models
-- Gen for non-realtime models, currently in beta.
+Currently we provide two different free host plugins:
+- Neutone FX for realtime models
+- Neutone Gen for non-realtime models, currently in beta.
 
 ## Why use the Neutone SDK
 
@@ -23,6 +24,8 @@ Currently we provide two different plugins:
 The SDK provides support for automatic buffering of inputs and outputs to your model and on-the-fly sample rate and stereo-mono conversion. It enables a model that can only be executed with a predefined number of samples to be used in the DAW at any sampling rate and any buffer size seamlessly. Additionally, within the SDK tools for benchmarking and profiling are readily available so you can easily debug and test the performance of your models.
 
 ## Citation
+
+Accepted to the AES International Conference on Artificial Intelligence and Machine Learning for Audio held in London, UK on Sep. 8th to 10th, 2025.
 
 <pre><code>@inproceedings{mitcheltree2025neutone,
     title={Neutone {SDK}: An Open Source Framework for Neural Audio Processing},
@@ -99,7 +102,7 @@ If you just want to wrap a model without going through a detailed description of
 
 ### Gen
 - We provide the same simple clipper example as above, but using the NonRealtime Gen wrappers at [examples/neutone_gen/example_clipper.py](examples/neutone_gen/example_clipper.py)
-- A more intricate example of how to wrap a text to audio model is available at [examples/neutone_gen/example_musicgen_load.py](examples/neutone_gen/example_musicgen_load.py). This showcases how a tokenizer can be used and requires a traced or scripted musicgen model.
+- A more intricate example of how to wrap a text to audio model is available at [examples/neutone_gen/example_musicgen_load.py](examples/neutone_gen/example_musicgen_load.py). This showcases how a tokenizer can be used and requires a traced or scripted MusicGen model.
 
 <a name="description"/>
 
@@ -202,7 +205,7 @@ Moreover, the parameters sent by the plugin come in at a sample level granularit
 
 ### Reporting delay
 
-Some audio models will delay the audio for a certain amount of samples. This depends on the architecture of each particular model. In order for the wet and dry signal that is going through the plugin to be aligned users are required to report how many samples of delay their model induces. The `calc_model_delay_samples` can be used to specify the number of samples of delay. RAVE models on average have one buffer of delay (2048 samples) which is communicated statically in the `calc_model_delay_samples` method and can be seen in the examples. Models implemented with overlap-add will have a delay equal to the number of samples used for crossfading as seen in the [Demucs model wrapper](https://neutone.space/blog/implementing-models-with-overlap-add-in-neutone/) or the [spectral filter example](examples/example_spectral_filter.py). 
+Some audio models will delay the audio for a certain amount of samples. This depends on the architecture of each particular model. In order for the wet and dry signal that is going through the plugin to be aligned users are required to report how many samples of delay their model induces. The `calc_model_delay_samples` can be used to specify the number of samples of delay. RAVE models on average have one buffer of delay (2048 samples) which is communicated statically in the `calc_model_delay_samples` method and can be seen in the examples. Models implemented with overlap-add will have a delay equal to the number of samples used for crossfading as seen in the [Demucs model wrapper](https://neutone.ai/blog/implementing-models-with-overlap-add-in-neutone/) or the [spectral filter example](examples/example_spectral_filter.py). 
 
 Calculating the delay your model adds can be difficult, especially since there can be multiple different sources of delay that need to be combined (e.g. cossfading delay, filter delay, lookahead buffer delay, and / or neural networks trained on unaligned dry and wet audio). It's worth spending some extra time testing the model in your DAW to make sure the delay is being reported correctly.
 
@@ -258,7 +261,7 @@ class OverdriveModelWrapper(WaveformToWaveformBase):
         return "Steinmetz, C. J., & Reiss, J. D. (2020). Randomized overdrive neural networks. arXiv preprint arXiv:2010.04237."
 ```
 
-Check out the documentation of the methods inside [core.py](neutone_sdk/core.py), as well as the random overdrive model on the [website](https://neutone.space/models/) and in the plugin to understand where each field will be displayed.
+Check out the documentation of the methods inside [core.py](neutone_sdk/core.py), as well as the random overdrive model on the [website](https://neutone.ai/fx/models) and in the plugin to understand where each field will be displayed.
 
 To submit a model, please [open an issue on the GitHub repository](https://github.com/QosmoInc/neutone_sdk/issues/new?assignees=bogdanteleaga%2C+christhetree&labels=enhancement&template=request-add-model.md&title=%5BMODEL%5D+%3CNAME%3E). We currently need the following:
 - A short description of what the model does and how it can contribute to the community
@@ -344,8 +347,7 @@ Similar to benchmarking, it can be ran at different combinations of sample rates
 ## Known issues
 
 - Freezing models on save can cause instabilities and thus freezing is disabled by default. We recommend trying to save models both with and without freeze.
-- Displaying some metadata information does not currently work with local model loading in the plugin.
-- Lookahead buffers will be implemented at the SDK level in the near future but is currently possible with additional code. An example is available in [this file](neutone_sdk/realtime_stft.py).
+- Lookahead buffers are currently not included in the SDK (only lookbehind buffers), but can be implemented with additional code. An example is available in [this file](neutone_sdk/realtime_stft.py).
 - M1 acceleration is currently not supported.
 - Wrapping more complicated models can result in obscure TorchScript errors.
 
@@ -357,12 +359,10 @@ Similar to benchmarking, it can be ran at different combinations of sample rates
 We welcome any contributions to the SDK. Please add types wherever possible and use the `black` formatter for readability.
 
 The current roadmap is:
-- Looking into alternatives for TorchScript
-- Extend support for non-realtime models
+- Looking into alternatives for TorchScript (ExecuTorch?)
 
 <a name="credits"/>
 
 ## Credits
 
-The audacitorch project was a major inspiration for the development of the SDK. [Check it out here](
-https://github.com/hugofloresgarcia/audacitorch)
+The audacitorch project was a major inspiration for the development of the SDK. [Check it out here](https://github.com/hugofloresgarcia/audacitorch)
