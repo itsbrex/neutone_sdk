@@ -1,6 +1,6 @@
 from pathlib import Path
 
-SDK_VERSION = "1.5.1"
+SDK_VERSION = "1.5.2"
 
 MAX_N_PARAMS = 4
 MAX_N_CATEGORICAL_VALUES = 20
