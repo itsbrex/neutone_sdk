@@ -1,6 +1,6 @@
 # Neutone SDK
 
-[![Release](https://img.shields.io/badge/Release-v1.5.0-green)](https://github.com/Neutone/neutone_sdk/releases/tag/v1.5.0)
+[![Release](https://img.shields.io/badge/Release-v1.5.2-green)](https://github.com/Neutone/neutone_sdk/releases/tag/v1.5.2)
 [![arXiv](https://img.shields.io/badge/arXiv-2508.09126-b31b1b.svg)](https://arxiv.org/abs/2508.09126)
 [![Plugin](https://img.shields.io/badge/Realtime%20Plugin-Neutone%20FX-orange)](https://neutone.ai/fx)
 [![Plugin](https://img.shields.io/badge/Non--realtime%20Plugin-Neutone%20Gen-orange)](https://neutone.ai/gen)
