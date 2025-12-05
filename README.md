@@ -81,7 +81,7 @@ We provide the following pre-wrapped models:
 - [LoopGAN by Nao Tokui trained on a proprietary dataset](https://github.com/naotokui/LoopGAN) - [Download .nm model](https://dev.neutone.ai/neutone-gen/loopgan_nao_tokui.nm)
 - [LoopGAN trained on the WaivOps EDM-HSE dataset](https://github.com/patchbanks/WaivOps-EDM-HSE) - [Download .nm model](https://dev.neutone.ai/neutone-gen/loopgan_4bars_edm_hse.nm)
 - [Stable Audio Open Small](https://huggingface.co/stabilityai/stable-audio-open-1.0) - [Download .nm model](https://dev.neutone.ai/neutone-gen/stable_audio_open_small.nm)
-- [HT Demucs](https://github.com/facebookresearch/demucs) - [Download .nm model](https://dev.neutone.ai/neutone-gen/ht_demucs.nm)
+- [HT Demucs](https://github.com/facebookresearch/demucs) - [Download .nm model](https://dev.neutone.ai/neutone-gen/ht_demucs_4stems.nm)
 
 
 <a name="examples"/>
